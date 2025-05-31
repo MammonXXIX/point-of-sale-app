@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // for sync supabase database
+  directUrl = env("DIRECT_URL") // for queries supabase database
+}
+
+model Category {
+    id String @id @default(uuid())
+    name String
+    productCount Int @default(0)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    Products Product[]
+}
+
+model Product {
+    id String @id @default(uuid())
+    name String
+    price Int
+    imageUrl String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    categoryId String
+    category Category @relation(fields: [categoryId], references: [id])
+
+    OrderItems OrderItem[]
+}
+
+model Order {
+  id String @id @default(uuid())
+  subTotal Int
+  tax Int
+  grandTotal Int
+
+  externalTransactionId String?
+  paymentMethodId String?
+
+  status OrderStatus @default(AWAITING_PAYMENT)
+
+  payAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+   OrderItems OrderItem[]
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PROCESSING
+  DONE
+}
+
+model OrderItem {
+    id String @id @default(uuid())
+    productId String
+    orderId String
+
+    product Product @relation(fields: [productId], references: [id])
+    order Order @relation(fields: [orderId], references: [id])
+
+    price Int
+    quantity Int
+}
+        
