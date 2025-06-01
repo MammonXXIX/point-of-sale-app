@@ -33,7 +33,7 @@ const ProductsPage: NextPageWithLayout = () => {
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
     const [productIdToEdit, setProductIdToEdit] = useState<string | null>(null);
 
-    const { data: products, isLoading: productsIsLoading } = api.product.getProduct.useQuery();
+    const { data: products, isLoading: productsIsLoading } = api.product.getProduct.useQuery({ categoryId: 'ALL' });
 
     const { mutate: createProduct } = api.product.createProduct.useMutation({
         onSuccess: async () => {

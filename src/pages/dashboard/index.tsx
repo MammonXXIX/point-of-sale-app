@@ -4,22 +4,26 @@ import { CreateOrderSheet } from '@/components/shared/CreateOrderSheet';
 import { ProductMenuCard } from '@/components/shared/product/ProductMenuCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CATEGORIES } from '@/data/mock';
+import { useCartStore } from '@/store/cart';
 import { api } from '@/utils/api';
 import { Search, ShoppingCart } from 'lucide-react';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import type { NextPageWithLayout } from '../_app';
-import { useCartStore } from '@/store/cart';
 
 const DashboardPage: NextPageWithLayout = () => {
     const cartStore = useCartStore();
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [orderSheetOpen, setOrderSheetOpen] = useState(false);
 
-    const { data: products } = api.product.getProduct.useQuery();
+    const { data: products } = api.product.getProduct.useQuery({ categoryId: selectedCategory });
+    const { data: categories } = api.category.getCategories.useQuery();
+
+    const totalProducts = categories?.reduce((a, b) => {
+        return a + b._count.Products;
+    }, 0);
 
     const handleCategoryClick = (categoryId: string) => {
         setSelectedCategory(categoryId);
@@ -43,7 +47,7 @@ const DashboardPage: NextPageWithLayout = () => {
             <DashboardHeader>
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                        <DashboardTitle>Dashboard {cartStore.items.length}</DashboardTitle>
+                        <DashboardTitle>Dashboard</DashboardTitle>
                         <DashboardDescription>Welcome to your Simple POS system dashboard.</DashboardDescription>
                     </div>
 
@@ -62,11 +66,18 @@ const DashboardPage: NextPageWithLayout = () => {
                 </div>
 
                 <div className="flex space-x-4 overflow-x-auto pb-2">
-                    {CATEGORIES.map((category) => (
+                    <CategoryFilterCard
+                        key="ALL"
+                        name="ALL"
+                        productCount={totalProducts ?? 0}
+                        isSelected={selectedCategory === 'ALL'}
+                        onClick={() => handleCategoryClick('ALL')}
+                    />
+                    {categories?.map((category) => (
                         <CategoryFilterCard
                             key={category.id}
                             name={category.name}
-                            productCount={category.count}
+                            productCount={category._count.Products}
                             isSelected={selectedCategory === category.id}
                             onClick={() => handleCategoryClick(category.id)}
                         />

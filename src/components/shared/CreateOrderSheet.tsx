@@ -66,7 +66,6 @@ export const CreateOrderSheet = ({ open, onOpenChange }: CreateOrderSheetProps) 
 
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [paymentInfoLoading, setPaymentInfoLoading] = useState(false);
-    const [paymentSuccess, setPaymentSuccess] = useState(false);
 
     const subtotal = cartStore.items.reduce((a, b) => {
         return a + b.price * b.quantity;
@@ -79,6 +78,25 @@ export const CreateOrderSheet = ({ open, onOpenChange }: CreateOrderSheetProps) 
             toast('Successfuly Created Order');
 
             setPaymentDialogOpen(true);
+        },
+    });
+
+    const { mutate: simulatePayment } = api.order.simulatePayment.useMutation({
+        onSuccess: () => {
+            toast('Simulate Payment');
+        },
+    });
+
+    const {
+        mutate: checkOrderStatus,
+        data: checkOrderStatusResponse,
+        isPending: isCheckOrderStatusPending,
+        reset: resetCheckOrderStatus,
+    } = api.order.checkOrderStatus.useMutation({
+        onSuccess: (res) => {
+            if (res) {
+                cartStore.clearCart();
+            }
         },
     });
 
@@ -100,7 +118,25 @@ export const CreateOrderSheet = ({ open, onOpenChange }: CreateOrderSheetProps) 
     };
 
     const handleRefresh = () => {
-        setPaymentSuccess(true);
+        if (!createOrderResponse) return;
+
+        checkOrderStatus({
+            orderId: createOrderResponse?.order.id,
+        });
+    };
+
+    const handleSimulatePayment = () => {
+        if (!createOrderResponse) return;
+
+        simulatePayment({
+            orderId: createOrderResponse?.order.id,
+        });
+    };
+
+    const handleClosePaymentDialog = () => {
+        setPaymentDialogOpen(false);
+        onOpenChange(false);
+        resetCheckOrderStatus();
     };
 
     return (
@@ -158,11 +194,13 @@ export const CreateOrderSheet = ({ open, onOpenChange }: CreateOrderSheetProps) 
                             </div>
                         ) : (
                             <>
-                                <Button variant="link" onClick={handleRefresh}>
-                                    Refresh
-                                </Button>
+                                {!checkOrderStatusResponse && (
+                                    <Button variant="link" onClick={handleRefresh} disabled={isCheckOrderStatusPending}>
+                                        {isCheckOrderStatusPending ? 'Refreshing' : 'Refresh'}
+                                    </Button>
+                                )}
 
-                                {!paymentSuccess ? (
+                                {!checkOrderStatusResponse ? (
                                     <PaymentQRCode qrString={createOrderResponse?.qrString ?? ''} />
                                 ) : (
                                     <CheckCircle2 className="size-80 text-green-500" />
@@ -171,13 +209,19 @@ export const CreateOrderSheet = ({ open, onOpenChange }: CreateOrderSheetProps) 
                                 <p className="text-3xl font-medium">{toRupiah(createOrderResponse?.order.grandTotal ?? 0)}</p>
 
                                 <p className="text-muted-foreground text-sm">Transaction ID: {createOrderResponse?.order.id}</p>
+
+                                {!checkOrderStatusResponse && (
+                                    <Button onClick={handleSimulatePayment} variant="link">
+                                        Simulate Payment
+                                    </Button>
+                                )}
                             </>
                         )}
                     </div>
 
                     <AlertDialogFooter>
                         <AlertDialogCancel asChild>
-                            <Button disabled={paymentInfoLoading} variant="outline" className="w-full">
+                            <Button disabled={paymentInfoLoading} variant="outline" className="w-full" onClick={handleClosePaymentDialog}>
                                 Done
                             </Button>
                         </AlertDialogCancel>
